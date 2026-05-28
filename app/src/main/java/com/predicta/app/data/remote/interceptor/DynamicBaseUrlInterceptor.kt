@@ -15,9 +15,9 @@ class DynamicBaseUrlInterceptor(
 
     override fun intercept(chain: Interceptor.Chain): Response {
         val originalRequest = chain.request()
-        val customUrlString = settingsRepository.settings.value.baseUrl
+        val customUrlString = settingsRepository.settings.value.baseUrl.trim()
 
-        if (customUrlString.isNotBlank()) {
+        if (customUrlString.isNotBlank() && !customUrlString.contains("xxxx", ignoreCase = true)) {
             val customUrl = customUrlString.toHttpUrlOrNull()
             if (customUrl != null) {
                 val newUrl = originalRequest.url.newBuilder()

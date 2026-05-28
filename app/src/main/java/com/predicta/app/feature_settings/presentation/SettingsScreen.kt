@@ -65,14 +65,7 @@ import org.koin.androidx.compose.koinViewModel
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.TextButton
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import coil.compose.AsyncImage
-import androidx.compose.material.icons.outlined.Edit
 import com.predicta.app.ui.modifier.pressScale
 
 @Composable
@@ -115,7 +108,6 @@ fun SettingsScreen(
         item {
             ServerSettingsCard(
                 baseUrl = state.baseUrl,
-                onUpdateUrl = { viewModel.onEvent(SettingsEvent.UpdateBaseUrl(it)) },
             )
         }
 
@@ -572,13 +564,8 @@ private fun SettingsCard(
 @Composable
 private fun ServerSettingsCard(
     baseUrl: String,
-    onUpdateUrl: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    var showEditUrlDialog by remember { mutableStateOf(false) }
-    var newUrl by remember { mutableStateOf(baseUrl) }
-    val editUrlInteractionSource = remember { MutableInteractionSource() }
-
     SettingsCard(modifier = modifier) {
         SectionTitle(
             icon = Icons.Outlined.Sync,
@@ -607,60 +594,6 @@ private fun ServerSettingsCard(
                     modifier = Modifier.padding(top = 2.dp)
                 )
             }
-            Icon(
-                imageVector = Icons.Outlined.Edit,
-                contentDescription = "Edit Server URL",
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier
-                    .size(20.dp)
-                    .pressScale(editUrlInteractionSource)
-                    .clickable(
-                        interactionSource = editUrlInteractionSource,
-                        indication = null,
-                    ) {
-                        newUrl = baseUrl
-                        showEditUrlDialog = true
-                    }
-            )
-        }
-
-        if (showEditUrlDialog) {
-            AlertDialog(
-                onDismissRequest = { showEditUrlDialog = false },
-                title = {
-                    Text("Адрес бэкенда", fontWeight = FontWeight.Bold)
-                },
-                text = {
-                    OutlinedTextField(
-                        value = newUrl,
-                        onValueChange = { newUrl = it },
-                        singleLine = true,
-                        label = { Text("Base URL (ngrok или локальный)") },
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                },
-                confirmButton = {
-                    TextButton(
-                        onClick = {
-                            if (newUrl.isNotBlank()) {
-                                onUpdateUrl(newUrl.trim())
-                            }
-                            showEditUrlDialog = false
-                        }
-                    ) {
-                        Text("Сохранить", fontWeight = FontWeight.Bold)
-                    }
-                },
-                dismissButton = {
-                    TextButton(
-                        onClick = { showEditUrlDialog = false }
-                    ) {
-                        Text("Отмена")
-                    }
-                },
-                shape = PredictaShapes.medium,
-                containerColor = MaterialTheme.colorScheme.surface,
-            )
         }
     }
 }
