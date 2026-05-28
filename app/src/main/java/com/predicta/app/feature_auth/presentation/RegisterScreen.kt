@@ -17,7 +17,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material.icons.outlined.VisibilityOff
@@ -64,15 +66,12 @@ fun RegisterScreen(
     val state by viewModel.state.collectAsStateWithLifecycle()
     var passwordVisible by remember { mutableStateOf(false) }
     val registerInteraction = remember { MutableInteractionSource() }
+    val scrollState = rememberScrollState()
 
-    LaunchedEffect(Unit) {
-        viewModel.effects.collect { effect ->
-            when (effect) {
-                AuthEffect.Authenticated -> {
-                    viewModel.onEvent(AuthEvent.ResetSuccessState)
-                    onNavigateBackToLogin()
-                }
-            }
+    LaunchedEffect(state.isSuccess) {
+        if (state.isSuccess) {
+            viewModel.onEvent(AuthEvent.ResetSuccessState)
+            onNavigateBackToLogin()
         }
     }
 
@@ -99,7 +98,9 @@ fun RegisterScreen(
                     ),
             ) {
                 Column(
-                    modifier = Modifier.padding(24.dp),
+                    modifier = Modifier
+                        .padding(24.dp)
+                        .verticalScroll(scrollState),
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center,
                 ) {
@@ -124,14 +125,53 @@ fun RegisterScreen(
                     Spacer(modifier = Modifier.height(26.dp))
 
                     OutlinedTextField(
-                        value = state.name,
-                        onValueChange = { viewModel.onEvent(AuthEvent.NameChanged(it)) },
+                        value = state.firstName,
+                        onValueChange = { viewModel.onEvent(AuthEvent.FirstNameChanged(it)) },
                         label = { Text("Имя") },
                         modifier = Modifier.fillMaxWidth(),
                         shape = PredictaShapes.medium,
                         singleLine = true,
-                        isError = state.nameError != null,
-                        supportingText = state.nameError?.let { { Text(it) } },
+                        isError = state.firstNameError != null,
+                        supportingText = state.firstNameError?.let { { Text(it) } },
+                    )
+
+                    Spacer(modifier = Modifier.height(14.dp))
+
+                    OutlinedTextField(
+                        value = state.lastName,
+                        onValueChange = { viewModel.onEvent(AuthEvent.LastNameChanged(it)) },
+                        label = { Text("Фамилия") },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = PredictaShapes.medium,
+                        singleLine = true,
+                        isError = state.lastNameError != null,
+                        supportingText = state.lastNameError?.let { { Text(it) } },
+                    )
+
+                    Spacer(modifier = Modifier.height(14.dp))
+
+                    OutlinedTextField(
+                        value = state.telegramNick,
+                        onValueChange = { viewModel.onEvent(AuthEvent.TelegramNickChanged(it)) },
+                        label = { Text("Telegram") },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = PredictaShapes.medium,
+                        singleLine = true,
+                        isError = state.telegramNickError != null,
+                        supportingText = state.telegramNickError?.let { { Text(it) } },
+                    )
+
+                    Spacer(modifier = Modifier.height(14.dp))
+
+                    OutlinedTextField(
+                        value = state.phone,
+                        onValueChange = { viewModel.onEvent(AuthEvent.PhoneChanged(it)) },
+                        label = { Text("Телефон") },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = PredictaShapes.medium,
+                        singleLine = true,
+                        isError = state.phoneError != null,
+                        supportingText = state.phoneError?.let { { Text(it) } },
                     )
 
                     Spacer(modifier = Modifier.height(14.dp))

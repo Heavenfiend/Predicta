@@ -6,6 +6,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.scaleIn
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -19,6 +20,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -27,20 +29,17 @@ import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material.icons.outlined.Person
-import androidx.compose.material.icons.outlined.Star
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -50,15 +49,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.predicta.app.feature_employees.domain.model.TeamMember
 import com.predicta.app.ui.modifier.liquidGlass
 import com.predicta.app.ui.theme.BackgroundCritical
 import com.predicta.app.ui.theme.BackgroundSuccess
 import com.predicta.app.ui.theme.PredictaShapes
 import com.predicta.app.ui.theme.PrimaryBlue
-import com.predicta.app.ui.theme.SecondarySlate
 import com.predicta.app.ui.theme.SemanticCritical
 import com.predicta.app.ui.theme.SemanticSuccess
-import com.predicta.app.ui.theme.SemanticWarning
 import com.predicta.app.ui.theme.SurfaceWhite
 import org.koin.androidx.compose.koinViewModel
 
@@ -80,29 +78,31 @@ fun TaskReassignmentScreen(
         }
     }
 
-    if (state.isLoading) {
+    if (state.isLoading && state.taskId.isEmpty()) {
         Box(
             modifier = modifier.fillMaxSize(),
             contentAlignment = Alignment.Center,
         ) {
-            Text(
-                text = "Загрузка...",
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            CircularProgressIndicator(
+                color = MaterialTheme.colorScheme.primary,
+                strokeWidth = 3.dp,
+                modifier = Modifier.size(40.dp),
             )
         }
         return
     }
 
-    if (state.taskId.isEmpty()) {
+    if (state.error != null && state.taskId.isEmpty()) {
         Box(
             modifier = modifier.fillMaxSize(),
             contentAlignment = Alignment.Center,
         ) {
             Text(
-                text = "Задача не найдена",
+                text = state.error ?: "Задача не найдена",
                 style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = MaterialTheme.colorScheme.error,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(24.dp)
             )
         }
         return
@@ -170,20 +170,89 @@ fun TaskReassignmentScreen(
 
         // ── Transfer visualization ──────────────────────────────────────
         item {
+            val selectedExecutor = state.toExecutors.find { it.id == state.selectedExecutorId }
             TransferVisualization(
                 fromName = state.fromName,
-                toName = state.toName,
+                toName = selectedExecutor?.name ?: "Не выбран",
             )
         }
 
-        // ── Recommended assignee ────────────────────────────────────────
-        item {
-            RecommendedAssigneeCard(
-                name = state.toName,
-                role = state.toRole,
-                done = state.toDone,
-                total = state.toTotal,
-            )
+        // ── Selection list ──────────────────────────────────────────────
+        if (state.toExecutors.isNotEmpty() && !state.isReassigned) {
+            item {
+                Text(
+                    text = "Выберите нового исполнителя",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+            }
+            
+            items(state.toExecutors) { member ->
+                val isSelected = state.selectedExecutorId == member.id
+                val borderModifier = if (isSelected) {
+                    Modifier.border(2.dp, PrimaryBlue, PredictaShapes.medium)
+                } else Modifier
+                
+                Card(
+                    shape = PredictaShapes.medium,
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .then(borderModifier)
+                        .clickable { viewModel.onEvent(TaskReassignmentEvent.SelectExecutor(member.id)) }
+                        .liquidGlass(
+                            shape = PredictaShapes.medium,
+                            blurRadius = 0.dp,
+                            tintColor = if (isSelected) PrimaryBlue else Color.Gray,
+                            tintAlpha = if (isSelected) 0.08f else 0.02f,
+                            isActive = isSelected
+                        )
+                ) {
+                    Row(
+                        modifier = Modifier.padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .clip(CircleShape)
+                                .background(PrimaryBlue.copy(alpha = 0.1f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.Person,
+                                contentDescription = null,
+                                tint = PrimaryBlue,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
+                        
+                        Spacer(modifier = Modifier.width(12.dp))
+                        
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = member.name,
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                            Text(
+                                text = member.role,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        
+                        Text(
+                            text = "${member.doneCount} / ${member.totalCount}",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
+            }
         }
 
         // ── Confirm button or Success state ─────────────────────────────
@@ -208,21 +277,26 @@ fun TaskReassignmentScreen(
                     colors = ButtonDefaults.buttonColors(
                         containerColor = MaterialTheme.colorScheme.primary,
                     ),
+                    enabled = state.selectedExecutorId != null && !state.isLoading,
                     elevation = ButtonDefaults.buttonElevation(
                         defaultElevation = 4.dp,
                     ),
                 ) {
-                    Icon(
-                        imageVector = Icons.Filled.SwapHoriz,
-                        contentDescription = null,
-                        modifier = Modifier.size(22.dp),
-                    )
-                    Spacer(modifier = Modifier.width(10.dp))
-                    Text(
-                        text = "Подтвердить перераспределение",
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.SemiBold,
-                    )
+                    if (state.isLoading) {
+                        CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
+                    } else {
+                        Icon(
+                            imageVector = Icons.Filled.SwapHoriz,
+                            contentDescription = null,
+                            modifier = Modifier.size(22.dp),
+                        )
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Text(
+                            text = "Подтвердить перераспределение",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                    }
                 }
             } else {
                 SuccessCard(onGoToDashboard = { viewModel.onEvent(TaskReassignmentEvent.CompleteReassignment) })
@@ -232,10 +306,6 @@ fun TaskReassignmentScreen(
         item { Spacer(modifier = Modifier.height(16.dp)) }
     }
 }
-
-// ──────────────────────────────────────────────────────────────────────────────
-// Transfer Visualization (From → To)
-// ──────────────────────────────────────────────────────────────────────────────
 
 @Composable
 private fun TransferVisualization(
@@ -317,115 +387,6 @@ private fun TransferVisualization(
         }
     }
 }
-
-// ──────────────────────────────────────────────────────────────────────────────
-// Recommended Assignee Card
-// ──────────────────────────────────────────────────────────────────────────────
-
-@Composable
-private fun RecommendedAssigneeCard(
-    name: String,
-    role: String,
-    done: Int,
-    total: Int,
-    modifier: Modifier = Modifier,
-) {
-    Card(
-        shape = PredictaShapes.medium,
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface,
-        ),
-        modifier = modifier
-            .fillMaxWidth()
-            .liquidGlass(
-                shape = PredictaShapes.medium,
-                blurRadius = 0.dp,
-                tintColor = SemanticSuccess,
-                tintAlpha = 0.08f,
-                isActive = true,
-            ),
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(20.dp),
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                Icon(
-                    imageVector = Icons.Outlined.Star,
-                    contentDescription = null,
-                    tint = SemanticSuccess,
-                    modifier = Modifier.size(20.dp),
-                )
-                Text(
-                    text = "Рекомендуемый исполнитель",
-                    style = MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.SemiBold,
-                    color = SemanticSuccess,
-                )
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(48.dp)
-                        .clip(CircleShape)
-                        .background(SemanticSuccess.copy(alpha = 0.12f)),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(
-                        imageVector = Icons.Outlined.Person,
-                        contentDescription = null,
-                        tint = SemanticSuccess,
-                        modifier = Modifier.size(28.dp),
-                    )
-                }
-
-                Spacer(modifier = Modifier.width(14.dp))
-
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = name,
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.primary,
-                    )
-                    Text(
-                        text = role,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-
-                Column(horizontalAlignment = Alignment.End) {
-                    Text(
-                        text = "$done / $total",
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = SemanticSuccess,
-                    )
-                    Text(
-                        text = "задач закрыто",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            }
-        }
-    }
-}
-
-// ──────────────────────────────────────────────────────────────────────────────
-// Success Card
-// ──────────────────────────────────────────────────────────────────────────────
 
 @Composable
 private fun SuccessCard(

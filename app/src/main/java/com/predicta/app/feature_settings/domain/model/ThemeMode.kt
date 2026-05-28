@@ -30,4 +30,5 @@ enum class ThemeMode(
 
 data class AppSettings(
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
+    val baseUrl: String = "",
 )

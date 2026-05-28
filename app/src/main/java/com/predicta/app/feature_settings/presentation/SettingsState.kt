@@ -9,4 +9,5 @@ data class SettingsState(
     val role: String = "",
     val isLoggedIn: Boolean = false,
     val avatarUri: String? = null,
+    val baseUrl: String = "",
 )

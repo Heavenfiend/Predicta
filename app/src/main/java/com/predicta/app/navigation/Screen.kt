@@ -60,6 +60,8 @@ sealed class Screen(
         fun createRoute(taskId: String): String = "task_reassignment/$taskId"
     }
 
+    data object TaskCreate : Screen("task_create")
+
     companion object {
         /** Screens that appear in the bottom navigation bar. */
         val bottomNavItems = listOf(Dashboard, TeamVelocity, Settings)

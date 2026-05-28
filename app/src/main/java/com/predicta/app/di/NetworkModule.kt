@@ -2,15 +2,17 @@ package com.predicta.app.di
 
 import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
 import com.predicta.app.data.remote.PredictaApi
+import com.predicta.app.data.remote.interceptor.AuthInterceptor
+import com.predicta.app.data.remote.interceptor.DynamicBaseUrlInterceptor
+import com.predicta.app.data.remote.interceptor.NgrokInterceptor
 import kotlinx.serialization.json.Json
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
+import com.predicta.app.core.network.NetworkConfig
 import org.koin.dsl.module
 import retrofit2.Retrofit
 import java.util.concurrent.TimeUnit
-
-private const val BASE_URL = "https://api.predicta.mock/"
 
 val networkModule = module {
 
@@ -30,6 +32,9 @@ val networkModule = module {
         }
 
         OkHttpClient.Builder()
+            .addInterceptor(DynamicBaseUrlInterceptor(settingsRepository = get()))
+            .addInterceptor(NgrokInterceptor())
+            .addInterceptor(AuthInterceptor(sessionManager = get()))
             .addInterceptor(loggingInterceptor)
             .connectTimeout(30, TimeUnit.SECONDS)
             .readTimeout(30, TimeUnit.SECONDS)
@@ -42,7 +47,7 @@ val networkModule = module {
         val contentType = "application/json".toMediaType()
 
         Retrofit.Builder()
-            .baseUrl(BASE_URL)
+            .baseUrl(NetworkConfig.BASE_URL)
             .client(get())
             .addConverterFactory(json.asConverterFactory(contentType))
             .build()

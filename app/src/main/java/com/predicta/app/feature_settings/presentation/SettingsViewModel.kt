@@ -32,6 +32,7 @@ class SettingsViewModel(
                     role = session.role,
                     isLoggedIn = session.isLoggedIn,
                     avatarUri = session.avatarUri,
+                    baseUrl = appSettings.baseUrl,
                 )
             }.collect { settingsState ->
                 _state.update {
@@ -51,6 +52,9 @@ class SettingsViewModel(
             }
             is SettingsEvent.UpdateAvatar -> {
                 sessionManager.updateAvatar(event.uri)
+            }
+            is SettingsEvent.UpdateBaseUrl -> {
+                settingsRepository.setBaseUrl(event.url)
             }
             SettingsEvent.Logout -> {
                 sessionManager.clearSession()

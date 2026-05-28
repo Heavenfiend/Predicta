@@ -16,6 +16,10 @@ enum class ValidationField {
     NAME,
     RECOVERY_CODE,
     CONFIRM_PASSWORD,
+    FIRST_NAME,
+    LAST_NAME,
+    TELEGRAM_NICK,
+    PHONE,
 }
 
 enum class ValidationReason {

@@ -1,13 +1,10 @@
 package com.predicta.app.feature_employees.presentation
 
-import com.predicta.app.feature_dashboard.domain.model.DashboardSnapshot
+import com.predicta.app.feature_employees.domain.model.TeamMember
 
-/**
- * Immutable UI state for the Team Velocity screen.
- */
 data class EmployeeState(
     val isLoading: Boolean = true,
-    val demoData: DashboardSnapshot? = null,
-    val selectedEmployeeId: String? = null,
+    val teamMembers: List<TeamMember> = emptyList(),
+    val teamInsight: String = "",
     val error: String? = null,
 )

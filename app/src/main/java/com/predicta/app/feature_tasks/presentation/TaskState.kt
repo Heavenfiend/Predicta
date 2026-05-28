@@ -1,16 +1,16 @@
 package com.predicta.app.feature_tasks.presentation
 
-import com.predicta.app.feature_employees.domain.model.Employee
+import com.predicta.app.feature_employees.domain.model.TeamMember
 
-/**
- * Immutable UI state for the Task Assignment screen.
- */
 data class TaskState(
     val isLoading: Boolean = true,
+    val taskTitle: String = "",
     val taskDescription: String = "",
-    val employees: List<Employee> = emptyList(),
-    val selectedEmployee: Employee? = null,
+    val employees: List<TeamMember> = emptyList(),
+    val selectedEmployee: TeamMember? = null,
     val isDropdownExpanded: Boolean = false,
-    val aiRecommendation: String? = null,
+    val aiInsight: String? = null,
+    val suggestedEmployee: TeamMember? = null,
+    val isSuccess: Boolean = false,
     val error: String? = null,
 )

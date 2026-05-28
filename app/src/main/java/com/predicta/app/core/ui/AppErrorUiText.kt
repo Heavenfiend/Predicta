@@ -30,6 +30,10 @@ private fun AppError.Validation.toUiText(): String {
         }
         ValidationField.NAME -> "Имя не может быть пустым"
         ValidationField.RECOVERY_CODE -> "Код не может быть пустым"
+        ValidationField.FIRST_NAME -> "Имя не может быть пустым"
+        ValidationField.LAST_NAME -> "Фамилия не может быть пустой"
+        ValidationField.TELEGRAM_NICK -> "Telegram не может быть пустым"
+        ValidationField.PHONE -> "Телефон не может быть пустым"
     }
 }
 

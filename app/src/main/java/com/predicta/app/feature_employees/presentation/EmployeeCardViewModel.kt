@@ -3,10 +3,9 @@ package com.predicta.app.feature_employees.presentation
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.predicta.app.feature_dashboard.domain.model.DashboardEmployeeIds
-import com.predicta.app.feature_dashboard.domain.model.DashboardTaskStatus
-import com.predicta.app.feature_dashboard.domain.usecase.GetDemoStateUseCase
-import com.predicta.app.feature_employees.domain.usecase.ToggleDeepWorkUseCase
+import com.predicta.app.core.error.AppResult
+import com.predicta.app.core.ui.toUiText
+import com.predicta.app.feature_employees.domain.repository.EmployeeRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -15,8 +14,7 @@ import kotlinx.coroutines.launch
 
 class EmployeeCardViewModel(
     savedStateHandle: SavedStateHandle,
-    private val getDemoStateUseCase: GetDemoStateUseCase,
-    private val toggleDeepWorkUseCase: ToggleDeepWorkUseCase,
+    private val employeeRepository: EmployeeRepository,
 ) : ViewModel() {
 
     private val employeeId: String = checkNotNull(savedStateHandle["employeeId"])
@@ -25,69 +23,56 @@ class EmployeeCardViewModel(
     val state: StateFlow<EmployeeCardState> = _state.asStateFlow()
 
     init {
+        loadEmployeeData()
+    }
+
+    private fun loadEmployeeData() {
         viewModelScope.launch {
-            getDemoStateUseCase().collect { demo ->
-                val isPavel = employeeId == DashboardEmployeeIds.PAVEL_ID
-                
-                if (isPavel) {
+            _state.update { it.copy(isLoading = true, error = null) }
+
+            // Load employee detail
+            when (val result = employeeRepository.getEmployeeDetail(employeeId)) {
+                is AppResult.Success -> {
+                    val detail = result.value
                     _state.update {
                         it.copy(
                             isLoading = false,
-                            employeeId = employeeId,
-                            isPavel = true,
-                            name = demo.pavelName,
-                            role = demo.pavelRole,
-                            done = demo.pavelDone,
-                            total = demo.pavelTotal,
-                            isHealthy = false,
-                            predictedDays = demo.pavelPredictedDays,
-                            deadlineDays = demo.pavelDeadlineDays,
-                            aiInsight = demo.pavelAiInsight,
-                            riskFactors = demo.pavelRiskFactors,
-                            tasks = demo.pavelTasks,
-                            isDeepWorkActive = demo.isDeepWorkActive,
-                        )
-                    }
-                } else {
-                    val assignedTasks = demo.pavelTasks.filter { task ->
-                        task.assigneeId == DashboardEmployeeIds.OLEG_ID &&
-                            task.status == DashboardTaskStatus.REASSIGNED
-                    }
-                    _state.update {
-                        it.copy(
-                            isLoading = false,
-                            employeeId = employeeId,
-                            isPavel = false,
-                            name = demo.olegName,
-                            role = demo.olegRole,
-                            done = demo.olegDone,
-                            total = demo.olegTotal,
-                            isHealthy = true,
-                            tasks = assignedTasks,
-                            isDeepWorkActive = demo.isDeepWorkActive,
+                            employeeId = detail.id,
+                            name = detail.name,
+                            role = detail.role,
+                            telegramNick = detail.telegramNick,
+                            avatarUrl = detail.avatarUrl,
+                            doneCount = detail.doneCount,
+                            totalCount = detail.totalCount,
+                            remainingCount = detail.remainingCount,
+                            health = detail.health,
+                            aiInsight = detail.aiInsight,
+                            tasks = detail.tasks,
                         )
                     }
                 }
+                is AppResult.Failure -> {
+                    _state.update {
+                        it.copy(isLoading = false, error = result.error.toUiText())
+                    }
+                }
             }
-        }
-    }
 
-    fun onToggleDeepWork() {
-        toggleDeepWorkUseCase()
-    }
-
-    fun onToggleChartMode() {
-        _state.update { current ->
-            val newShowRecovery = !current.showRecoveryForecast
-            val newForecastData = if (newShowRecovery) {
-                listOf(0.85f, 0.70f, 0.55f, 0.40f, 0.30f, 0.25f, 0.20f)
-            } else {
-                emptyList()
+            // Load analytics (non-blocking)
+            when (val analyticsResult = employeeRepository.getEmployeeAnalytics(employeeId)) {
+                is AppResult.Success -> {
+                    val analytics = analyticsResult.value
+                    _state.update {
+                        it.copy(
+                            forecastDaysToComplete = analytics.forecastDaysToComplete,
+                            sprintDaysLeft = analytics.sprintDaysLeft,
+                            delayDays = analytics.delayDays,
+                            analyticsAiInsight = analytics.aiInsight,
+                        )
+                    }
+                }
+                is AppResult.Failure -> { /* Silently ignore analytics failure */ }
             }
-            current.copy(
-                showRecoveryForecast = newShowRecovery,
-                recoveryForecastData = newForecastData,
-            )
         }
     }
 }

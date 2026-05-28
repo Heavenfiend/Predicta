@@ -1,6 +1,7 @@
 package com.predicta.app.feature_settings.data.repository
 
 import android.content.Context
+import com.predicta.app.core.network.NetworkConfig
 import com.predicta.app.feature_settings.domain.model.AppSettings
 import com.predicta.app.feature_settings.domain.model.ThemeMode
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -17,6 +18,7 @@ class AppSettingsRepository(context: Context) {
             themeMode = ThemeMode.fromStorageValue(
                 preferences.getString(KEY_THEME_MODE, ThemeMode.SYSTEM.storageValue),
             ),
+            baseUrl = preferences.getString(KEY_BASE_URL, NetworkConfig.BASE_URL).orEmpty(),
         ),
     )
     val settings: StateFlow<AppSettings> = _settings.asStateFlow()
@@ -27,6 +29,14 @@ class AppSettingsRepository(context: Context) {
             .apply()
 
         _settings.update { it.copy(themeMode = themeMode) }
+    }
+
+    fun setBaseUrl(url: String) {
+        preferences.edit()
+            .putString(KEY_BASE_URL, url)
+            .apply()
+
+        _settings.update { it.copy(baseUrl = url) }
     }
 
     fun isIntroSeen(): Boolean {
@@ -43,5 +53,6 @@ class AppSettingsRepository(context: Context) {
         const val PREFERENCES_NAME = "predicta_settings"
         const val KEY_THEME_MODE = "theme_mode"
         const val KEY_INTRO_SEEN = "intro_seen"
+        const val KEY_BASE_URL = "base_url"
     }
 }

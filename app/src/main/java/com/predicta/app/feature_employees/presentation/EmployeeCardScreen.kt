@@ -3,13 +3,9 @@ package com.predicta.app.feature_employees.presentation
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -25,18 +21,17 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material.icons.outlined.Warning
-import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -45,10 +40,8 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -61,45 +54,20 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
-import com.patrykandpatrick.vico.compose.cartesian.axis.rememberAxisGuidelineComponent
-import com.patrykandpatrick.vico.compose.cartesian.axis.rememberAxisLabelComponent
-import com.patrykandpatrick.vico.compose.cartesian.axis.rememberAxisLineComponent
-import com.patrykandpatrick.vico.compose.cartesian.axis.rememberAxisTickComponent
-import com.patrykandpatrick.vico.compose.cartesian.axis.rememberBottom
-import com.patrykandpatrick.vico.compose.cartesian.axis.rememberStart
-import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLine
-import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLineCartesianLayer
-import com.patrykandpatrick.vico.compose.cartesian.rememberCartesianChart
-import com.patrykandpatrick.vico.compose.common.fill
-import com.patrykandpatrick.vico.core.cartesian.axis.HorizontalAxis
-import com.patrykandpatrick.vico.core.cartesian.axis.VerticalAxis
-import com.patrykandpatrick.vico.core.cartesian.data.CartesianChartModelProducer
-import com.patrykandpatrick.vico.core.cartesian.data.CartesianValueFormatter
-import com.patrykandpatrick.vico.core.cartesian.data.lineSeries
-import com.patrykandpatrick.vico.core.cartesian.layer.LineCartesianLayer
-import com.predicta.app.feature_dashboard.domain.model.DashboardTask
-import com.predicta.app.feature_dashboard.domain.model.DashboardTaskStatus
+import com.predicta.app.feature_employees.domain.model.EmployeeTask
+import com.predicta.app.feature_employees.domain.model.Health
+import com.predicta.app.feature_employees.domain.model.TaskStatus
 import com.predicta.app.ui.components.AnimatedNumberText
 import com.predicta.app.ui.modifier.liquidGlass
 import com.predicta.app.ui.modifier.pressScale
-import com.predicta.app.ui.theme.BackgroundCritical
-import com.predicta.app.ui.theme.BackgroundSuccess
-import com.predicta.app.ui.theme.BackgroundWarning
-import com.predicta.app.ui.theme.BurnoutLevel
 import com.predicta.app.ui.theme.PredictaShapes
 import com.predicta.app.ui.theme.PrimaryBlue
-import com.predicta.app.ui.theme.SecondarySlate
 import com.predicta.app.ui.theme.SemanticCritical
 import com.predicta.app.ui.theme.SemanticSuccess
 import com.predicta.app.ui.theme.SemanticWarning
-import com.predicta.app.ui.theme.SurfaceWhite
-import com.predicta.app.ui.theme.TextSecondary
 import kotlinx.coroutines.delay
-
 import org.koin.androidx.compose.koinViewModel
 
 @Composable
@@ -112,55 +80,39 @@ fun EmployeeCardScreen(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
 
-    if (state.isLoading) return
-
-    if (state.isPavel) {
-        PavelCardContent(
-            state = state,
-            onBack = onNavigateBack,
-            onReassign = onNavigateToReassign,
-            onToggleDeepWork = viewModel::onToggleDeepWork,
-            onToggleChartMode = viewModel::onToggleChartMode,
-            modifier = modifier,
-        )
-    } else {
-        OlegCardContent(
-            state = state,
-            onBack = onNavigateBack,
-            modifier = modifier,
-        )
+    if (state.isLoading) {
+        Box(
+            modifier = modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center,
+        ) {
+            CircularProgressIndicator(
+                color = MaterialTheme.colorScheme.primary,
+                strokeWidth = 3.dp,
+                modifier = Modifier.size(40.dp),
+            )
+        }
+        return
     }
+
+    EmployeeCardContent(
+        state = state,
+        onBack = onNavigateBack,
+        onReassign = onNavigateToReassign,
+        modifier = modifier,
+    )
 }
 
-// ──────────────────────────────────────────────────────────────────────────────
-// Pavel's Card — The main demo scenario screen
-// ──────────────────────────────────────────────────────────────────────────────
-
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun PavelCardContent(
+private fun EmployeeCardContent(
     state: EmployeeCardState,
     onBack: () -> Unit,
     onReassign: (String) -> Unit,
-    onToggleDeepWork: () -> Unit,
-    onToggleChartMode: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    // Simulate AI "typing" effect
     var showAiInsight by remember { mutableStateOf(false) }
-    var showInsightSheet by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) {
-        delay(600)
+        delay(300)
         showAiInsight = true
-    }
-
-    if (showInsightSheet) {
-        AiInsightBottomSheet(
-            insight = state.aiInsight,
-            predictedDays = state.predictedDays,
-            deadlineDays = state.deadlineDays,
-            onDismiss = { showInsightSheet = false },
-        )
     }
 
     LazyColumn(
@@ -195,228 +147,41 @@ private fun PavelCardContent(
             EmployeeHeaderCard(
                 name = state.name,
                 role = state.role,
-                done = state.done,
-                total = state.total,
-                isHealthy = state.isHealthy,
+                telegramNick = state.telegramNick,
+                done = state.doneCount,
+                total = state.totalCount,
+                health = state.health,
             )
         }
 
-        // ── Risk Factors ──────────────────────────────────────────────────
-        if (state.riskFactors.isNotEmpty()) {
-            item {
-                Card(
-                    shape = PredictaShapes.medium,
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .liquidGlass(
-                            shape = PredictaShapes.medium,
-                            blurRadius = 0.dp,
-                            tintColor = SemanticWarning,
-                            tintAlpha = 0.08f,
-                            isActive = true,
-                        )
-                ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(20.dp),
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        ) {
-                            Icon(
-                                imageVector = Icons.Outlined.Warning,
-                                contentDescription = null,
-                                tint = SemanticWarning,
-                                modifier = Modifier.size(20.dp),
-                            )
-                            Text(
-                                text = "Факторы риска",
-                                style = MaterialTheme.typography.labelLarge,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.primary,
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.height(12.dp))
-
-                        state.riskFactors.forEach { factor ->
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                modifier = Modifier.padding(bottom = 6.dp),
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(6.dp)
-                                        .clip(CircleShape)
-                                        .background(SemanticWarning),
-                                )
-                                Text(
-                                    text = factor,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        // ── Forecast chart (plan vs fact) ───────────────────────────────
+        // ── Forecast / Deadline analytics block ────────────────────────
         item {
             ForecastCard(
-                predictedDays = state.predictedDays,
-                deadlineDays = state.deadlineDays,
-                showRecoveryForecast = state.showRecoveryForecast,
-                recoveryForecastData = state.recoveryForecastData,
-                onToggleChartMode = onToggleChartMode,
+                forecastDays = state.forecastDaysToComplete,
+                sprintDaysLeft = state.sprintDaysLeft,
+                delayDays = state.delayDays,
             )
         }
 
         // ── AI Insight card ─────────────────────────────────────────────
-        item {
-            AnimatedVisibility(
-                visible = showAiInsight,
-                enter = fadeIn(tween(800)) + slideInVertically(tween(800)),
-            ) {
-                AiInsightCard(
-                    insight = state.aiInsight,
-                    onOpenDetails = { showInsightSheet = true },
-                )
+        if (state.aiInsight.isNotBlank() || state.analyticsAiInsight.isNotBlank()) {
+            item {
+                AnimatedVisibility(
+                    visible = showAiInsight,
+                    enter = fadeIn(tween(600)) + slideInVertically(tween(600)),
+                ) {
+                    AiInsightCard(
+                        insight = state.aiInsight.ifBlank { state.analyticsAiInsight }
+                    )
+                }
             }
         }
 
         // ── Task list ───────────────────────────────────────────────────
-        item {
-            Text(
-                text = "Текущие задачи",
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.padding(top = 4.dp),
-            )
-        }
-
-        itemsIndexed(
-            items = state.tasks,
-            key = { _, task -> task.id },
-        ) { _, task ->
-            TaskCard(
-                task = task,
-                onReassign = { onReassign(task.id) },
-            )
-        }
-
-        item { Spacer(modifier = Modifier.height(8.dp)) }
-    }
-}
-
-// ──────────────────────────────────────────────────────────────────────────────
-// Oleg's Card — simple summary
-// ──────────────────────────────────────────────────────────────────────────────
-
-@Composable
-private fun OlegCardContent(
-    state: EmployeeCardState,
-    onBack: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val assignedTasks = state.tasks
-
-    LazyColumn(
-        modifier = modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background),
-        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
-    ) {
-        item {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = onBack) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Назад",
-                        tint = MaterialTheme.colorScheme.primary,
-                    )
-                }
-                Spacer(modifier = Modifier.width(4.dp))
-                Text(
-                    text = "Карточка сотрудника",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.primary,
-                )
-            }
-        }
-
-        item {
-            EmployeeHeaderCard(
-                name = state.name,
-                role = state.role,
-                done = state.done,
-                total = state.total,
-                isHealthy = state.isHealthy,
-            )
-        }
-
-        item {
-            Card(
-                shape = PredictaShapes.medium,
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
-                ),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .liquidGlass(
-                        shape = PredictaShapes.medium,
-                        blurRadius = 0.dp,
-                        tintColor = SemanticSuccess,
-                        tintAlpha = 0.08f,
-                    ),
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(20.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
-                    Icon(
-                        imageVector = Icons.Filled.CheckCircle,
-                        contentDescription = null,
-                        tint = SemanticSuccess,
-                        modifier = Modifier.size(28.dp),
-                    )
-                    Column {
-                        Text(
-                            text = "Оптимальная загрузка",
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.SemiBold,
-                            color = SemanticSuccess,
-                        )
-                        Text(
-                            text = if (assignedTasks.isEmpty()) {
-                                "Олег закрыл все задачи вовремя и готов принять дополнительную нагрузку."
-                            } else {
-                                "Олег получил ${assignedTasks.size} новую задачу. Она назначена, но еще не выполнена."
-                            },
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(top = 4.dp),
-                        )
-                    }
-                }
-            }
-        }
-
-        if (assignedTasks.isNotEmpty()) {
+        if (state.tasks.isNotEmpty()) {
             item {
                 Text(
-                    text = "Новые задачи",
+                    text = "Текущие задачи",
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.primary,
@@ -424,11 +189,14 @@ private fun OlegCardContent(
                 )
             }
 
-            itemsIndexed(
-                items = assignedTasks,
-                key = { _, task -> "oleg_${task.id}" },
-            ) { _, task ->
-                AssignedTaskCard(task = task)
+            items(
+                items = state.tasks,
+                key = { it.id },
+            ) { task ->
+                TaskCard(
+                    task = task,
+                    onReassign = { onReassign(task.id) },
+                )
             }
         }
 
@@ -436,22 +204,21 @@ private fun OlegCardContent(
     }
 }
 
-// ──────────────────────────────────────────────────────────────────────────────
-// Shared Components
-// ──────────────────────────────────────────────────────────────────────────────
-
 @Composable
 private fun EmployeeHeaderCard(
     name: String,
     role: String,
+    telegramNick: String,
     done: Int,
     total: Int,
-    isHealthy: Boolean,
+    health: Health,
     modifier: Modifier = Modifier,
 ) {
-    val burnoutLevel = if (isHealthy) BurnoutLevel.LOW else BurnoutLevel.HIGH
-    val statusColor = burnoutLevel.getStrokeColor()
-    val cardBgColor = burnoutLevel.getBackgroundColor()
+    val barColor = when (health) {
+        Health.GOOD -> SemanticSuccess
+        Health.NORMAL -> PrimaryBlue
+        Health.BAD -> SemanticCritical
+    }
 
     Card(
         shape = PredictaShapes.medium,
@@ -461,7 +228,7 @@ private fun EmployeeHeaderCard(
             .liquidGlass(
                 shape = PredictaShapes.medium,
                 blurRadius = 0.dp,
-                tintColor = statusColor,
+                tintColor = barColor,
                 tintAlpha = 0.08f,
             ),
     ) {
@@ -475,13 +242,13 @@ private fun EmployeeHeaderCard(
                 modifier = Modifier
                     .size(56.dp)
                     .clip(CircleShape)
-                    .background(statusColor.copy(alpha = 0.12f)),
+                    .background(barColor.copy(alpha = 0.12f)),
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
                     imageVector = Icons.Outlined.Person,
                     contentDescription = null,
-                    tint = statusColor,
+                    tint = barColor,
                     modifier = Modifier.size(32.dp),
                 )
             }
@@ -500,6 +267,15 @@ private fun EmployeeHeaderCard(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+                if (telegramNick.isNotBlank()) {
+                    Text(
+                        text = "Telegram: @${telegramNick.removePrefix("@")}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = PrimaryBlue,
+                        fontWeight = FontWeight.Medium,
+                        modifier = Modifier.padding(top = 2.dp)
+                    )
+                }
             }
 
             Column(horizontalAlignment = Alignment.End) {
@@ -509,7 +285,7 @@ private fun EmployeeHeaderCard(
                     style = MaterialTheme.typography.headlineSmall.copy(
                         fontWeight = FontWeight.Bold,
                     ),
-                    color = statusColor,
+                    color = barColor,
                 )
                 Text(
                     text = "задач",
@@ -522,100 +298,14 @@ private fun EmployeeHeaderCard(
 }
 
 @Composable
-private fun AssignedTaskCard(
-    task: DashboardTask,
-    modifier: Modifier = Modifier,
-) {
-    Card(
-        shape = PredictaShapes.medium,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        modifier = modifier
-            .fillMaxWidth()
-            .liquidGlass(
-                shape = PredictaShapes.medium,
-                blurRadius = 0.dp,
-                tintColor = SemanticWarning,
-                tintAlpha = 0.08f,
-                isActive = true,
-            ),
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(10.dp)
-                    .clip(CircleShape)
-                    .background(SemanticWarning),
-            )
-
-            Spacer(modifier = Modifier.width(12.dp))
-
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = task.title,
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Medium,
-                    color = MaterialTheme.colorScheme.primary,
-                )
-                Text(
-                    text = "Назначена Олегу · к выполнению",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = SemanticWarning,
-                    modifier = Modifier.padding(top = 2.dp),
-                )
-            }
-        }
-    }
-}
-
-@Composable
 private fun ForecastCard(
-    predictedDays: Int,
-    deadlineDays: Int,
-    showRecoveryForecast: Boolean,
-    recoveryForecastData: List<Float>,
-    onToggleChartMode: () -> Unit,
+    forecastDays: Int,
+    sprintDaysLeft: Int,
+    delayDays: Int,
     modifier: Modifier = Modifier,
 ) {
-    val modelProducer = remember { CartesianChartModelProducer() }
-    val planColor = MaterialTheme.colorScheme.primary
-    val axisLabel = rememberAxisLabelComponent(
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-    )
-    val axisLine = rememberAxisLineComponent(
-        fill = fill(MaterialTheme.colorScheme.outline.copy(alpha = 0.55f)),
-    )
-    val axisTick = rememberAxisTickComponent(
-        fill = fill(MaterialTheme.colorScheme.outline.copy(alpha = 0.45f)),
-    )
-    val axisGuideline = rememberAxisGuidelineComponent(
-        fill = fill(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.38f)),
-    )
-    val dayLabels = remember { listOf("Сейчас", "+1д", "+2д", "+3д", "+4д", "+5д", "+6д", "+7д", "+8д") }
-    val bottomAxisValueFormatter = remember {
-        CartesianValueFormatter { _, value, _ ->
-            dayLabels.getOrElse(value.toInt()) { "" }
-        }
-    }
-
-    LaunchedEffect(showRecoveryForecast, recoveryForecastData) {
-        modelProducer.runTransaction {
-            lineSeries {
-                if (showRecoveryForecast) {
-                    series(recoveryForecastData)
-                } else {
-                    // Plan line (ideal pace)
-                    series(0.0, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0)
-                    // Fact line (Pavel's actual pace — slow)
-                    series(0.0, 0.2, 0.3, 0.5, 0.6, 0.7, 0.9, 1.0, 1.1)
-                }
-            }
-        }
-    }
+    val isDelayed = delayDays > 0
+    val color = if (isDelayed) SemanticCritical else SemanticSuccess
 
     Card(
         shape = PredictaShapes.medium,
@@ -625,6 +315,8 @@ private fun ForecastCard(
             .liquidGlass(
                 shape = PredictaShapes.medium,
                 blurRadius = 0.dp,
+                tintColor = color,
+                tintAlpha = 0.05f
             ),
     ) {
         Column(
@@ -639,7 +331,7 @@ private fun ForecastCard(
                 Icon(
                     imageVector = Icons.Outlined.Schedule,
                     contentDescription = null,
-                    tint = SemanticCritical,
+                    tint = color,
                     modifier = Modifier.size(20.dp),
                 )
                 Text(
@@ -650,120 +342,74 @@ private fun ForecastCard(
                 )
             }
 
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(14.dp))
 
-            Text(
-                text = if (showRecoveryForecast) {
-                    "При включенной защите фокуса риск выгорания плавно снижается."
-                } else {
-                    "С текущим темпом Павел закончит свои задачи через $predictedDays дней вместо $deadlineDays."
-                },
-                style = MaterialTheme.typography.bodySmall,
-                color = if (showRecoveryForecast) SemanticSuccess else SemanticCritical,
-                fontWeight = FontWeight.Medium,
-            )
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // Legend and Toggle Button
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                if (showRecoveryForecast) {
-                    LegendItem(color = SemanticSuccess, label = "Прогноз")
-                } else {
-                    Row(horizontalArrangement = Arrangement.spacedBy(20.dp)) {
-                        LegendItem(color = MaterialTheme.colorScheme.primary, label = "План")
-                        LegendItem(color = SemanticCritical, label = "Факт")
-                    }
+                Column {
+                    Text(
+                        text = "Прогноз завершения",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = "$forecastDays дн.",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
                 }
 
-                OutlinedButton(
-                    onClick = onToggleChartMode,
-                    shape = PredictaShapes.medium,
-                ) {
+                Column {
                     Text(
-                        text = if (showRecoveryForecast) "История нагрузки" else "Прогноз восстановления",
-                        style = MaterialTheme.typography.labelSmall,
+                        text = "Дней до конца спринта",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = "$sprintDaysLeft дн.",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+
+                Column(horizontalAlignment = Alignment.End) {
+                    Text(
+                        text = "Отставание",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = if (isDelayed) "+$delayDays дн." else "0 дн.",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = color
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(10.dp))
 
-            val planLine = LineCartesianLayer.rememberLine(
-                fill = remember(planColor) { LineCartesianLayer.LineFill.single(fill(planColor)) },
-            )
-            val factLine = LineCartesianLayer.rememberLine(
-                fill = remember { LineCartesianLayer.LineFill.single(fill(SemanticCritical)) },
-            )
-            val recoveryLine = LineCartesianLayer.rememberLine(
-                fill = remember { LineCartesianLayer.LineFill.single(fill(SemanticSuccess)) },
-            )
-
-            CartesianChartHost(
-                chart = rememberCartesianChart(
-                    rememberLineCartesianLayer(
-                        lineProvider = if (showRecoveryForecast) {
-                            LineCartesianLayer.LineProvider.series(recoveryLine)
-                        } else {
-                            LineCartesianLayer.LineProvider.series(planLine, factLine)
-                        }
-                    ),
-                    startAxis = VerticalAxis.rememberStart(
-                        line = axisLine,
-                        label = axisLabel,
-                        tick = axisTick,
-                        guideline = axisGuideline,
-                    ),
-                    bottomAxis = HorizontalAxis.rememberBottom(
-                        line = axisLine,
-                        label = axisLabel,
-                        tick = axisTick,
-                        guideline = axisGuideline,
-                        valueFormatter = bottomAxisValueFormatter,
-                    ),
-                ),
-                modelProducer = modelProducer,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(180.dp),
+            Text(
+                text = if (isDelayed) {
+                    "Внимание: Прогноз завершения задач превышает лимит спринта на $delayDays дн."
+                } else {
+                    "Сотрудник завершит все назначенные задачи до конца спринта."
+                },
+                style = MaterialTheme.typography.bodySmall,
+                color = color,
+                fontWeight = FontWeight.Medium,
             )
         }
     }
 }
 
 @Composable
-private fun LegendItem(
-    color: Color,
-    label: String,
-    modifier: Modifier = Modifier,
-) {
-    Row(
-        modifier = modifier,
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
-    ) {
-        Box(
-            modifier = Modifier
-                .size(10.dp)
-                .clip(CircleShape)
-                .background(color),
-        )
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-    }
-}
-
-@Composable
 private fun AiInsightCard(
     insight: String,
-    onOpenDetails: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Card(
@@ -817,136 +463,30 @@ private fun AiInsightCard(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     lineHeight = MaterialTheme.typography.bodyMedium.lineHeight,
                 )
-
-                Spacer(modifier = Modifier.height(14.dp))
-
-                OutlinedButton(
-                    onClick = onOpenDetails,
-                    shape = PredictaShapes.medium,
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Text(
-                        text = "Разобрать инсайт",
-                        fontWeight = FontWeight.SemiBold,
-                    )
-                }
             }
         }
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun AiInsightBottomSheet(
-    insight: String,
-    predictedDays: Int,
-    deadlineDays: Int,
-    onDismiss: () -> Unit,
-) {
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        containerColor = MaterialTheme.colorScheme.surface,
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 24.dp, vertical = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp),
-        ) {
-            Text(
-                text = "Как Predicta пришла к выводу",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary,
-            )
-            InsightReasonRow(
-                title = "Темп ниже плана",
-                value = "$predictedDays дн.",
-                description = "Прогноз завершения превышает дедлайн в $deadlineDays дня.",
-            )
-            InsightReasonRow(
-                title = "Риск перегруза",
-                value = "High",
-                description = "Открытые задачи сконцентрированы на одном исполнителе.",
-            )
-            InsightReasonRow(
-                title = "Рекомендация",
-                value = "Reassign",
-                description = "Перенести часть нагрузки на свободного участника команды.",
-            )
-            Text(
-                text = insight,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Spacer(modifier = Modifier.height(18.dp))
-        }
-    }
-}
-
-@Composable
-private fun InsightReasonRow(
-    title: String,
-    value: String,
-    description: String,
-    modifier: Modifier = Modifier,
-) {
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .liquidGlass(
-                shape = PredictaShapes.medium,
-                blurRadius = 0.dp,
-                isActive = true,
-            )
-            .padding(16.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSurface,
-            )
-            Text(
-                text = description,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        Text(
-            text = value,
-            style = MaterialTheme.typography.labelLarge,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.primary,
-        )
-    }
-}
-
 @Composable
 private fun TaskCard(
-    task: DashboardTask,
+    task: EmployeeTask,
     onReassign: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val statusColor = when (task.status) {
-        DashboardTaskStatus.DONE -> SemanticSuccess
-        DashboardTaskStatus.IN_PROGRESS -> SemanticWarning
-        DashboardTaskStatus.TODO -> MaterialTheme.colorScheme.onSurfaceVariant
-        DashboardTaskStatus.REASSIGNED -> MaterialTheme.colorScheme.primary
+        TaskStatus.DONE -> SemanticSuccess
+        TaskStatus.IN_PROGRESS -> SemanticWarning
+        TaskStatus.TODO -> MaterialTheme.colorScheme.onSurfaceVariant
     }
 
     val statusLabel = when (task.status) {
-        DashboardTaskStatus.DONE -> "Выполнено"
-        DashboardTaskStatus.IN_PROGRESS -> "В работе"
-        DashboardTaskStatus.TODO -> "Ожидает"
-        DashboardTaskStatus.REASSIGNED -> "Переназначена → ${task.assigneeName}"
+        TaskStatus.DONE -> "Выполнено"
+        TaskStatus.IN_PROGRESS -> "В работе"
+        TaskStatus.TODO -> "Ожидает"
     }
 
-    val canReassign = task.status == DashboardTaskStatus.IN_PROGRESS ||
-        task.status == DashboardTaskStatus.TODO
+    val canReassign = task.status == TaskStatus.IN_PROGRESS || task.status == TaskStatus.TODO
 
     Card(
         shape = PredictaShapes.medium,
@@ -984,12 +524,7 @@ private fun TaskCard(
                         text = task.title,
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.Medium,
-                        color = if (task.status == DashboardTaskStatus.REASSIGNED) {
-                            MaterialTheme.colorScheme.onSurfaceVariant
-                        } else MaterialTheme.colorScheme.primary,
-                        textDecoration = if (task.status == DashboardTaskStatus.REASSIGNED) {
-                            TextDecoration.LineThrough
-                        } else TextDecoration.None,
+                        color = MaterialTheme.colorScheme.primary,
                     )
                     Text(
                         text = statusLabel,

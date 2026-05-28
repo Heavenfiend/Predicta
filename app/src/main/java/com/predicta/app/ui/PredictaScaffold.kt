@@ -22,7 +22,18 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Assignment
+import androidx.compose.material.icons.filled.Dashboard
+import androidx.compose.material.icons.filled.People
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.outlined.Assignment
+import androidx.compose.material.icons.outlined.Dashboard
+import androidx.compose.material.icons.outlined.People
+import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
@@ -67,6 +78,7 @@ import com.predicta.app.feature_dashboard.presentation.DashboardScreen
 import com.predicta.app.feature_employees.presentation.EmployeeCardScreen
 import com.predicta.app.feature_employees.presentation.TeamVelocityScreen
 import com.predicta.app.feature_settings.presentation.SettingsScreen
+import com.predicta.app.feature_tasks.presentation.TaskCreateScreen
 import com.predicta.app.feature_tasks.presentation.TaskReassignmentScreen
 import com.predicta.app.navigation.Screen
 import com.predicta.app.ui.modifier.liquidGlass
@@ -123,6 +135,25 @@ fun PredictaScaffold(
                 PredictaBottomBar(
                     navController = navController,
                 )
+            }
+        },
+        floatingActionButton = {
+            AnimatedVisibility(
+                visible = showBottomBar,
+                enter = fadeIn(tween(180)) + slideInVertically { it / 2 },
+                exit = fadeOut(tween(120)) + slideOutVertically { it / 2 },
+            ) {
+                FloatingActionButton(
+                    onClick = { navController.navigate(Screen.TaskCreate.route) },
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary,
+                    shape = CircleShape,
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Add,
+                        contentDescription = "Создать задачу"
+                    )
+                }
             }
         },
         containerColor = MaterialTheme.colorScheme.background,
@@ -187,15 +218,6 @@ fun PredictaScaffold(
                     onNavigateToTeamVelocity = {
                         navController.navigate(Screen.TeamVelocity.route) {
                             launchSingleTop = true
-                        }
-                    },
-                    onResolveAlert = { alertId ->
-                        navController.navigate(Screen.TeamVelocity.route) {
-                            popUpTo(navController.graph.findStartDestination().id) {
-                                saveState = true
-                            }
-                            launchSingleTop = true
-                            restoreState = true
                         }
                     },
                     modifier = Modifier.padding(innerPadding)
@@ -267,6 +289,14 @@ fun PredictaScaffold(
                             launchSingleTop = true
                         }
                     },
+                    modifier = Modifier.padding(innerPadding)
+                )
+            }
+
+            // Экран создания задачи
+            composable(Screen.TaskCreate.route) {
+                TaskCreateScreen(
+                    onNavigateBack = { navController.popBackStack() },
                     modifier = Modifier.padding(innerPadding)
                 )
             }

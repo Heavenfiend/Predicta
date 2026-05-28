@@ -301,14 +301,6 @@ private fun LoginFormCard(
                     style = MaterialTheme.typography.bodyMedium,
                 )
             }
-
-            TextButton(onClick = onNavigateToForgotPassword) {
-                Text(
-                    text = "Забыли пароль?",
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-            }
         }
     }
 }

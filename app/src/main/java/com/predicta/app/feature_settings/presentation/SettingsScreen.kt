@@ -113,6 +113,13 @@ fun SettingsScreen(
         }
 
         item {
+            ServerSettingsCard(
+                baseUrl = state.baseUrl,
+                onUpdateUrl = { viewModel.onEvent(SettingsEvent.UpdateBaseUrl(it)) },
+            )
+        }
+
+        item {
             RuntimeStatusCard()
         }
 
@@ -559,5 +566,101 @@ private fun SettingsCard(
                 .padding(20.dp),
             content = content,
         )
+    }
+}
+
+@Composable
+private fun ServerSettingsCard(
+    baseUrl: String,
+    onUpdateUrl: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    var showEditUrlDialog by remember { mutableStateOf(false) }
+    var newUrl by remember { mutableStateOf(baseUrl) }
+    val editUrlInteractionSource = remember { MutableInteractionSource() }
+
+    SettingsCard(modifier = modifier) {
+        SectionTitle(
+            icon = Icons.Outlined.Sync,
+            title = "Сетевые настройки",
+        )
+
+        Spacer(modifier = Modifier.height(14.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "Адрес бэкенд-сервера (Base URL)",
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+                Text(
+                    text = baseUrl.ifBlank { "Не настроен" },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Medium,
+                    modifier = Modifier.padding(top = 2.dp)
+                )
+            }
+            Icon(
+                imageVector = Icons.Outlined.Edit,
+                contentDescription = "Edit Server URL",
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier
+                    .size(20.dp)
+                    .pressScale(editUrlInteractionSource)
+                    .clickable(
+                        interactionSource = editUrlInteractionSource,
+                        indication = null,
+                    ) {
+                        newUrl = baseUrl
+                        showEditUrlDialog = true
+                    }
+            )
+        }
+
+        if (showEditUrlDialog) {
+            AlertDialog(
+                onDismissRequest = { showEditUrlDialog = false },
+                title = {
+                    Text("Адрес бэкенда", fontWeight = FontWeight.Bold)
+                },
+                text = {
+                    OutlinedTextField(
+                        value = newUrl,
+                        onValueChange = { newUrl = it },
+                        singleLine = true,
+                        label = { Text("Base URL (ngrok или локальный)") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            if (newUrl.isNotBlank()) {
+                                onUpdateUrl(newUrl.trim())
+                            }
+                            showEditUrlDialog = false
+                        }
+                    ) {
+                        Text("Сохранить", fontWeight = FontWeight.Bold)
+                    }
+                },
+                dismissButton = {
+                    TextButton(
+                        onClick = { showEditUrlDialog = false }
+                    ) {
+                        Text("Отмена")
+                    }
+                },
+                shape = PredictaShapes.medium,
+                containerColor = MaterialTheme.colorScheme.surface,
+            )
+        }
     }
 }

@@ -1,10 +1,8 @@
 package com.predicta.app.feature_employees.presentation
 
-import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -20,6 +18,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -46,20 +45,16 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.predicta.app.feature_dashboard.domain.model.DashboardSnapshot
+import com.predicta.app.feature_employees.domain.model.Health
+import com.predicta.app.feature_employees.domain.model.TeamMember
 import com.predicta.app.ui.components.AnimatedNumberText
 import com.predicta.app.ui.modifier.liquidGlass
 import com.predicta.app.ui.modifier.pressScale
-import com.predicta.app.ui.theme.BackgroundCritical
-import com.predicta.app.ui.theme.BackgroundSuccess
-import com.predicta.app.ui.theme.BurnoutLevel
 import com.predicta.app.ui.theme.PredictaShapes
 import com.predicta.app.ui.theme.PrimaryBlue
-import com.predicta.app.ui.theme.SecondarySlate
 import com.predicta.app.ui.theme.SemanticCritical
 import com.predicta.app.ui.theme.SemanticSuccess
-import com.predicta.app.ui.theme.SurfaceWhite
-import com.predicta.app.ui.theme.TextSecondary
+import com.predicta.app.ui.theme.SemanticWarning
 import org.koin.androidx.compose.koinViewModel
 
 @Composable
@@ -93,7 +88,7 @@ private fun TeamVelocityContent(
     onEvent: (EmployeeEvent) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    if (state.isLoading || state.demoData == null) {
+    if (state.isLoading) {
         Box(
             modifier = modifier.fillMaxSize(),
             contentAlignment = Alignment.Center,
@@ -106,8 +101,6 @@ private fun TeamVelocityContent(
         }
         return
     }
-
-    val demo = state.demoData
 
     LazyColumn(
         modifier = modifier
@@ -124,49 +117,48 @@ private fun TeamVelocityContent(
                 fontWeight = FontWeight.SemiBold,
             )
             Text(
-                text = "Бэкенд-команда · ${demo.sprintName}",
+                text = "Бэкенд-команда",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 2.dp),
             )
         }
 
-        // ── Oleg's card ─────────────────────────────────────────────────
-        item {
+        // ── Team members ────────────────────────────────────────────────
+        items(state.teamMembers) { member ->
             VelocityCard(
-                name = demo.olegName,
-                role = demo.olegRole,
-                done = demo.olegDone,
-                total = demo.olegTotal,
-                isHealthy = true,
-                onClick = { onEvent(EmployeeEvent.SelectEmployee(demo.olegId)) },
-            )
-        }
-
-        // ── Pavel's card ────────────────────────────────────────────────
-        item {
-            VelocityCard(
-                name = demo.pavelName,
-                role = demo.pavelRole,
-                done = demo.pavelDone,
-                total = demo.pavelTotal,
-                isHealthy = false,
-                onClick = { onEvent(EmployeeEvent.SelectEmployee(demo.pavelId)) },
+                name = member.name,
+                role = member.role,
+                done = member.doneCount,
+                total = member.totalCount,
+                health = member.health,
+                onClick = { onEvent(EmployeeEvent.SelectEmployee(member.id)) },
             )
         }
 
         // ── Summary card ────────────────────────────────────────────────
         item {
-            SummaryCard(demo = demo)
+            SummaryCard(teamMembers = state.teamMembers)
+        }
+
+        // ── Team Insight Card ───────────────────────────────────────────
+        if (state.teamInsight.isNotBlank()) {
+            item {
+                Text(
+                    text = "ИИ-Инсайт команды",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.SemiBold,
+                )
+            }
+            item {
+                TeamInsightCard(insight = state.teamInsight)
+            }
         }
 
         item { Spacer(modifier = Modifier.height(8.dp)) }
     }
 }
-
-// ──────────────────────────────────────────────────────────────────────────────
-// Velocity Card — horizontal progress bar per employee
-// ──────────────────────────────────────────────────────────────────────────────
 
 @Composable
 private fun VelocityCard(
@@ -174,14 +166,25 @@ private fun VelocityCard(
     role: String,
     done: Int,
     total: Int,
-    isHealthy: Boolean,
+    health: Health,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val progress = if (total > 0) done.toFloat() / total else 0f
-    val burnoutLevel = if (isHealthy) BurnoutLevel.LOW else BurnoutLevel.HIGH
-    val barColor = burnoutLevel.getStrokeColor()
-    val cardBgColor = burnoutLevel.getBackgroundColor()
+    
+    val barColor = when (health) {
+        Health.GOOD -> SemanticSuccess
+        Health.NORMAL -> PrimaryBlue
+        Health.BAD -> SemanticCritical
+    }
+    
+    val healthText = when (health) {
+        Health.GOOD -> "Темп: Отличный"
+        Health.NORMAL -> "Темп: В норме"
+        Health.BAD -> "Темп: Риск отставания"
+    }
+
+    val isActive = health == Health.BAD
     val interactionSource = remember { MutableInteractionSource() }
 
     // Animate progress
@@ -203,7 +206,7 @@ private fun VelocityCard(
                 blurRadius = 0.dp,
                 tintColor = barColor,
                 tintAlpha = 0.08f,
-                isActive = !isHealthy,
+                isActive = isActive,
             )
             .pressScale(interactionSource)
             .clickable(
@@ -221,7 +224,7 @@ private fun VelocityCard(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                // Avatar
+                // Avatar placeholder
                 Box(
                     modifier = Modifier
                         .size(44.dp)
@@ -253,7 +256,7 @@ private fun VelocityCard(
                     )
                 }
 
-                // Status badge
+                // Progress numbers
                 AnimatedNumberText(
                     value = done,
                     suffix = " / $total",
@@ -291,7 +294,7 @@ private fun VelocityCard(
 
             // Label under the bar
             Text(
-                text = if (isHealthy) "Темп: Отличный" else "Темп: Критическое отставание",
+                text = healthText,
                 style = MaterialTheme.typography.labelSmall,
                 fontWeight = FontWeight.Medium,
                 color = barColor,
@@ -300,15 +303,15 @@ private fun VelocityCard(
     }
 }
 
-// ──────────────────────────────────────────────────────────────────────────────
-// Summary Card
-// ──────────────────────────────────────────────────────────────────────────────
-
 @Composable
 private fun SummaryCard(
-    demo: DashboardSnapshot,
+    teamMembers: List<TeamMember>,
     modifier: Modifier = Modifier,
 ) {
+    val totalTotal = teamMembers.sumOf { it.totalCount }
+    val totalDone = teamMembers.sumOf { it.doneCount }
+    val totalRemaining = totalTotal - totalDone
+
     Card(
         shape = PredictaShapes.medium,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -325,7 +328,7 @@ private fun SummaryCard(
                 .padding(20.dp),
         ) {
             Text(
-                text = "Общая статистика",
+                text = "Общая статистика команды",
                 style = MaterialTheme.typography.labelLarge,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.primary,
@@ -335,20 +338,15 @@ private fun SummaryCard(
 
             SummaryRow(
                 label = "Всего задач в спринте",
-                value = "${demo.olegTotal + demo.pavelTotal}",
+                value = "$totalTotal",
             )
             SummaryRow(
-                label = "Закрыто",
-                value = "${demo.olegDone + demo.pavelDone}",
+                label = "Выполнено",
+                value = "$totalDone",
             )
             SummaryRow(
                 label = "Осталось",
-                value = "${(demo.olegTotal - demo.olegDone) + (demo.pavelTotal - demo.pavelDone)}",
-            )
-            SummaryRow(
-                label = "Статус проекта",
-                value = if (demo.isProjectDelayed) "Задержка ${demo.delayDays} дн." else "В срок",
-                valueColor = if (demo.isProjectDelayed) SemanticCritical else SemanticSuccess,
+                value = "$totalRemaining",
             )
         }
     }
@@ -358,7 +356,6 @@ private fun SummaryCard(
 private fun SummaryRow(
     label: String,
     value: String,
-    valueColor: Color = Color.Unspecified,
     modifier: Modifier = Modifier,
 ) {
     Row(
@@ -376,12 +373,38 @@ private fun SummaryRow(
             text = value,
             style = MaterialTheme.typography.bodyMedium,
             fontWeight = FontWeight.SemiBold,
-            color = if (valueColor == Color.Unspecified) {
-                MaterialTheme.colorScheme.primary
-            } else {
-                valueColor
-            },
+            color = MaterialTheme.colorScheme.primary,
         )
     }
 }
 
+@Composable
+private fun TeamInsightCard(
+    insight: String,
+    modifier: Modifier = Modifier,
+) {
+    Card(
+        shape = PredictaShapes.medium,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        modifier = modifier.liquidGlass(
+            shape = PredictaShapes.medium,
+            blurRadius = 0.dp,
+            liquidIntensity = 0.9f,
+        ),
+    ) {
+        Column(modifier = Modifier.padding(20.dp)) {
+            Text(
+                text = "Состояние команды:",
+                style = MaterialTheme.typography.titleSmall,
+                color = SemanticWarning,
+                fontWeight = FontWeight.Bold,
+            )
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(
+                text = insight,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+        }
+    }
+}

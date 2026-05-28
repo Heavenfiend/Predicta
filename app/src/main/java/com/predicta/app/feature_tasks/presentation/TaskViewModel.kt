@@ -4,21 +4,18 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.predicta.app.core.error.AppResult
 import com.predicta.app.core.ui.toUiText
-import com.predicta.app.feature_employees.domain.model.Employee
-import com.predicta.app.feature_employees.domain.usecase.GetEmployeesUseCase
+import com.predicta.app.data.remote.PredictaApi
+import com.predicta.app.data.remote.dto.CreateTaskRequest
+import com.predicta.app.feature_employees.domain.repository.EmployeeRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-/**
- * ViewModel for the Task Assignment screen.
- * Loads employee data for the assignee dropdown and generates
- * AI burnout recommendations when a risky assignment is detected.
- */
 class TaskViewModel(
-    private val getEmployees: GetEmployeesUseCase,
+    private val employeeRepository: EmployeeRepository,
+    private val api: PredictaApi,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(TaskState())
@@ -30,18 +27,21 @@ class TaskViewModel(
 
     fun onEvent(event: TaskEvent) {
         when (event) {
+            is TaskEvent.UpdateTitle -> {
+                _state.update { it.copy(taskTitle = event.text) }
+            }
             is TaskEvent.UpdateDescription -> {
                 _state.update { it.copy(taskDescription = event.text) }
-                evaluateAiRecommendation()
             }
             is TaskEvent.SelectEmployee -> {
                 _state.update {
                     it.copy(
                         selectedEmployee = event.employee,
                         isDropdownExpanded = false,
+                        aiInsight = null,
+                        suggestedEmployee = null
                     )
                 }
-                evaluateAiRecommendation()
             }
             is TaskEvent.ToggleDropdown -> {
                 _state.update { it.copy(isDropdownExpanded = !it.isDropdownExpanded) }
@@ -49,18 +49,39 @@ class TaskViewModel(
             is TaskEvent.DismissDropdown -> {
                 _state.update { it.copy(isDropdownExpanded = false) }
             }
-            is TaskEvent.DismissRecommendation -> {
-                _state.update { it.copy(aiRecommendation = null) }
+            TaskEvent.SubmitTask -> submitTask(force = false)
+            TaskEvent.ForceSubmitTask -> submitTask(force = true)
+            TaskEvent.SelectSuggestedEmployee -> {
+                val suggested = _state.value.suggestedEmployee
+                if (suggested != null) {
+                    _state.update {
+                        it.copy(
+                            selectedEmployee = suggested,
+                            suggestedEmployee = null,
+                            aiInsight = null
+                        )
+                    }
+                }
+            }
+            TaskEvent.ResetSuccessState -> {
+                _state.update { it.copy(isSuccess = false) }
             }
         }
     }
 
     private fun loadEmployees() {
         viewModelScope.launch {
-            _state.update { it.copy(isLoading = true) }
-            when (val result = getEmployees()) {
+            _state.update { it.copy(isLoading = true, error = null) }
+            when (val result = employeeRepository.getTeamVelocity()) {
                 is AppResult.Success -> {
-                    _state.update { it.copy(isLoading = false, employees = result.value) }
+                    val members = result.value
+                    _state.update {
+                        it.copy(
+                            isLoading = false,
+                            employees = members,
+                            selectedEmployee = members.firstOrNull()
+                        )
+                    }
                 }
                 is AppResult.Failure -> {
                     _state.update {
@@ -74,40 +95,60 @@ class TaskViewModel(
         }
     }
 
-    /**
-     * Core AI feature: when a task description is entered and the selected
-     * assignee has a high burnout risk, generate a warning recommendation
-     * suggesting a healthier alternative.
-     */
-    private fun evaluateAiRecommendation() {
+    private fun submitTask(force: Boolean) {
         val currentState = _state.value
-        val selected = currentState.selectedEmployee
-        val description = currentState.taskDescription
-
-        if (selected == null || description.isBlank()) {
-            _state.update { it.copy(aiRecommendation = null) }
+        val assignee = currentState.selectedEmployee
+        if (assignee == null) {
+            _state.update { it.copy(error = "Выберите исполнителя") }
+            return
+        }
+        if (currentState.taskTitle.isBlank()) {
+            _state.update { it.copy(error = "Заполните название задачи") }
             return
         }
 
-        if (selected.burnoutRisk >= 0.7f) {
-            // Find the team member with the lowest burnout risk as an alternative
-            val alternative = currentState.employees
-                .filter { it.id != selected.id }
-                .minByOrNull { it.burnoutRisk }
-
-            val burnoutPercent = (selected.burnoutRisk * 100).toInt()
-            val recommendation = if (alternative != null) {
-                val altPercent = (alternative.burnoutRisk * 100).toInt()
-                "⚠\uFE0F ${selected.name} is at ${burnoutPercent}% burnout risk. " +
-                    "Reassigning to ${alternative.name} (${altPercent}% risk) balances the workload."
-            } else {
-                "⚠\uFE0F ${selected.name} is at ${burnoutPercent}% burnout risk. " +
-                    "Consider reducing their workload before assigning new tasks."
+        viewModelScope.launch {
+            _state.update { it.copy(isLoading = true, error = null) }
+            try {
+                val response = api.createTask(
+                    CreateTaskRequest(
+                        title = currentState.taskTitle,
+                        description = currentState.taskDescription,
+                        assigneeId = assignee.id,
+                        force = force
+                    )
+                )
+                
+                if (response.created) {
+                    _state.update {
+                        it.copy(
+                            isLoading = false,
+                            isSuccess = true,
+                            aiInsight = null,
+                            suggestedEmployee = null
+                        )
+                    }
+                } else {
+                    val suggestedMember = if (response.suggestedAssigneeId != null) {
+                        currentState.employees.find { it.id == response.suggestedAssigneeId }
+                    } else null
+                    
+                    _state.update {
+                        it.copy(
+                            isLoading = false,
+                            aiInsight = response.aiInsight,
+                            suggestedEmployee = suggestedMember
+                        )
+                    }
+                }
+            } catch (e: Exception) {
+                _state.update {
+                    it.copy(
+                        isLoading = false,
+                        error = "Ошибка сети: ${e.message}"
+                    )
+                }
             }
-
-            _state.update { it.copy(aiRecommendation = recommendation) }
-        } else {
-            _state.update { it.copy(aiRecommendation = null) }
         }
     }
 }

@@ -18,9 +18,12 @@ class UserSessionManager(context: Context) {
             email = preferences.getString(KEY_EMAIL, "").orEmpty(),
             role = preferences.getString(KEY_ROLE, "").orEmpty(),
             avatarUri = preferences.getString(KEY_AVATAR_URI, null),
+            token = preferences.getString(KEY_TOKEN, null),
         ),
     )
     val session: StateFlow<UserSession> = _session.asStateFlow()
+
+    fun getToken(): String? = _session.value.token
 
     fun startSession(user: User) {
         preferences.edit()
@@ -28,6 +31,8 @@ class UserSessionManager(context: Context) {
             .putString(KEY_USER_NAME, user.name)
             .putString(KEY_EMAIL, user.email)
             .putString(KEY_ROLE, user.role)
+            .putString(KEY_TOKEN, user.token)
+            .putString(KEY_AVATAR_URI, user.avatarUrl)
             .apply()
 
         _session.update {
@@ -36,6 +41,8 @@ class UserSessionManager(context: Context) {
                 userName = user.name,
                 email = user.email,
                 role = user.role,
+                token = user.token,
+                avatarUri = user.avatarUrl,
             )
         }
     }
@@ -46,6 +53,8 @@ class UserSessionManager(context: Context) {
             .remove(KEY_USER_NAME)
             .remove(KEY_EMAIL)
             .remove(KEY_ROLE)
+            .remove(KEY_TOKEN)
+            .remove(KEY_AVATAR_URI)
             .apply()
 
         _session.value = UserSession()
@@ -67,6 +76,7 @@ class UserSessionManager(context: Context) {
         const val KEY_USER_NAME = "user_name"
         const val KEY_EMAIL = "email"
         const val KEY_ROLE = "role"
+        const val KEY_TOKEN = "jwt_token"
         const val KEY_AVATAR_URI = "avatar_uri"
     }
 }
@@ -77,4 +87,5 @@ data class UserSession(
     val email: String = "",
     val role: String = "",
     val avatarUri: String? = null,
+    val token: String? = null,
 )
