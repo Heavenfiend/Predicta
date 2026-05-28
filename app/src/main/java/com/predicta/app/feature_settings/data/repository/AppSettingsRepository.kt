@@ -29,8 +29,19 @@ class AppSettingsRepository(context: Context) {
         _settings.update { it.copy(themeMode = themeMode) }
     }
 
+    fun isIntroSeen(): Boolean {
+        return preferences.getBoolean(KEY_INTRO_SEEN, false)
+    }
+
+    fun setIntroSeen(seen: Boolean) {
+        preferences.edit()
+            .putBoolean(KEY_INTRO_SEEN, seen)
+            .apply()
+    }
+
     private companion object {
         const val PREFERENCES_NAME = "predicta_settings"
         const val KEY_THEME_MODE = "theme_mode"
+        const val KEY_INTRO_SEEN = "intro_seen"
     }
 }

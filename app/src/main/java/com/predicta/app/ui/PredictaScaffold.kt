@@ -77,7 +77,8 @@ import org.koin.androidx.compose.koinViewModel
 @Composable
 fun PredictaScaffold(
     modifier: Modifier = Modifier,
-    appViewModel: AppViewModel = koinViewModel()
+    appViewModel: AppViewModel = koinViewModel(),
+    fromIntro: Boolean = false
 ) {
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
@@ -145,6 +146,7 @@ fun PredictaScaffold(
         ) {
             composable(Screen.Splash.route) {
                 SplashScreen(
+                    skipDelay = fromIntro,
                     onSplashComplete = {
                         val destination = if (session.isLoggedIn) Screen.Dashboard.route else Screen.Login.route
                         navController.navigate(destination) {

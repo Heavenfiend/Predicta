@@ -82,4 +82,8 @@ dependencies {
 
     // Charts - Vico
     implementation(libs.vico.compose.m3)
+
+    // Media3
+    implementation(libs.androidx.media3.exoplayer)
+    implementation(libs.androidx.media3.ui)
 }

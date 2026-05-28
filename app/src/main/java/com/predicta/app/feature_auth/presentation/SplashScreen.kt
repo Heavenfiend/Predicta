@@ -18,23 +18,28 @@ import kotlinx.coroutines.delay
 fun SplashScreen(
     onSplashComplete: () -> Unit,
     modifier: Modifier = Modifier,
+    skipDelay: Boolean = false,
 ) {
     LaunchedEffect(Unit) {
-        delay(2000L)
+        if (!skipDelay) {
+            delay(2000L)
+        }
         onSplashComplete()
     }
 
-    Box(
-        modifier = modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background),
-        contentAlignment = Alignment.Center,
-    ) {
-        Image(
-            painter = painterResource(id = R.drawable.starting_screen),
-            contentDescription = null,
-            modifier = Modifier.fillMaxSize(),
-            contentScale = ContentScale.Crop,
-        )
+    if (!skipDelay) {
+        Box(
+            modifier = modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background),
+            contentAlignment = Alignment.Center,
+        ) {
+            Image(
+                painter = painterResource(id = R.drawable.starting_screen),
+                contentDescription = null,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop,
+            )
+        }
     }
 }
